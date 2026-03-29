@@ -85,3 +85,9 @@ Schedule::command('app:update-no-parts-valid-video')->hourly();
 Schedule::command('app:process-download-queue')
     ->everyMinute()
     ->withoutOverlapping();
+
+
+// 每天凌晨修复视频冻结状态，只有冻结且无效的视频才修复
+Schedule::command('app:fix-freeze-status')
+    ->daily()
+    ->withoutOverlapping();
