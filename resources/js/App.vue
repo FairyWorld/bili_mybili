@@ -107,6 +107,8 @@
         </div>
       </transition>
 
+      <ToastContainer />
+
       <main class="bg-white md:rounded-lg shadow-lg p-2 md:p-6">
         <router-view v-slot="{ Component }">
           <keep-alive>
@@ -122,6 +124,7 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ToastContainer from './components/ToastContainer.vue';
 
 const { t, locale } = useI18n();
 const isDrawerOpen = ref(false);

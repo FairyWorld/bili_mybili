@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\DownloadDanmakuJob;
+use App\Models\Video;
 use App\Services\DanmakuConverterService;
 use App\Services\VideoManager\Contracts\DanmakuServiceInterface;
 use App\Services\VideoManager\Contracts\FavoriteServiceInterface;
@@ -104,6 +106,50 @@ class VideoController extends Controller
 
         return response()->json($data, 200, []);
     }
+
+
+    /**
+     * 按视频 ID 排队拉取最新弹幕：单 P 立即执行；多 P 每个分 P 递增延迟 1 分钟。
+     */
+    public function refreshDanmaku(Request $request, int $id)
+    {
+        if (config('services.bilibili.setting_read_only')) {
+            abort(403);
+        }
+
+        $video = Video::query()->with(['parts' => fn ($q) => $q->orderBy('page')])->find($id);
+        if (! $video) {
+            abort(404);
+        }
+
+        if ($video->isAudio()) {
+            return response()->json([
+                'code' => 1,
+                'message' => '音频稿件不支持分 P 弹幕同步',
+                'parts_queued' => 0,
+            ]);
+        }
+
+        $parts = $video->parts;
+        if ($parts->isEmpty()) {
+            return response()->json([
+                'code' => 1,
+                'message' => '暂无可更新的分 P',
+                'parts_queued' => 0,
+            ]);
+        }
+
+        foreach ($parts->values() as $index => $part) {
+            DownloadDanmakuJob::dispatch($part)->delay(now()->addMinutes($index));
+        }
+
+        return response()->json([
+            'code' => 0,
+            'message' => '弹幕更新任务已加入队列',
+            'parts_queued' => $parts->count(),
+        ]);
+    }
+
 
     /**
      * 获取指定 CID 的弹幕数据（新格式）

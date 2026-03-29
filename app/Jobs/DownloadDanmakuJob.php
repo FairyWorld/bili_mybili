@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\VideoPart;
 use App\Services\VideoManager\Actions\Danmaku\DownloadDanmakuAction;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -14,9 +15,8 @@ use Illuminate\Queue\SerializesModels;
  */
 class DownloadDanmakuJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable,SerializesModels;
 
-    public $queue = 'slow';
     
     /**
      * 最大重试次数
@@ -28,11 +28,12 @@ class DownloadDanmakuJob implements ShouldQueue
      */
     public $backoff = [60, 300, 600];
 
-    /**
+    /**`
      * Create a new job instance.
      */
     public function __construct(public VideoPart $videoPart)
     {
+        $this->onQueue('slow');
     }
 
     /**

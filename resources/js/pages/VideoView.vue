@@ -15,8 +15,10 @@
             <div class="flex flex-col lg:flex-row gap-4">
                 <!-- Main Player -->
                 <div class="flex-1">
-                    <div ref="playerContainer" id="playerContainer" class="-mx-6 md:mx-0 bg-white shadow-lg overflow-hidden md:border border-gray-200/50">
-                        <Player ref="playerRef" @ready="onPlayerReady" :danmaku="danmaku" :url="currentPart?.url ?? ''" />
+                    <div ref="playerContainer" id="playerContainer"
+                        class="-mx-6 md:mx-0 bg-white shadow-lg overflow-hidden md:border border-gray-200/50">
+                        <Player ref="playerRef" @ready="onPlayerReady" :danmaku="danmaku"
+                            :url="currentPart?.url ?? ''" />
                     </div>
                 </div>
 
@@ -66,11 +68,12 @@
                             <!-- 预留头像位置 -->
                             <div
                                 class="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                <img :src="videoInfo.upper.cover_info?.image_url" alt="UP主头像" class="w-full h-full object-cover rounded-full">
+                                <img :src="videoInfo.upper.cover_info?.image_url" alt="UP主头像"
+                                    class="w-full h-full object-cover rounded-full">
                             </div>
                             <div class="min-w-0 flex-1" @click="openUpperSpace(videoInfo.upper.mid)">
                                 <div class="flex items-center space-x-2">
-                                    <h3 class="font-semibold text-gray-800 truncate" >{{ videoInfo.upper.name }}</h3>
+                                    <h3 class="font-semibold text-gray-800 truncate">{{ videoInfo.upper.name }}</h3>
                                     <span class="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">UID: {{
                                         videoInfo.upper.mid }}</span>
                                 </div>
@@ -138,8 +141,9 @@
                         </a>
                     </div>
 
-                    <!-- Download Actions -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-4 border-t border-gray-200/50">
+                    <!-- Download Actions（音频稿件隐藏「更新弹幕」） -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-gray-200/50"
+                        :class="isAudioVideo ? 'xl:grid-cols-4' : 'xl:grid-cols-5'">
                         <!-- Download Video Button -->
                         <button @click="downloadVideo"
                             class="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/50 rounded-xl hover:from-blue-100 hover:to-blue-150 hover:border-blue-300/50 transition-all duration-300 group hover:shadow-md">
@@ -173,13 +177,29 @@
                                 t('video.downloadCover') }}</span>
                         </button>
 
+                        <!-- Refresh danmaku from server -->
+                        <button v-if="!isAudioVideo" type="button" @click="openRefreshDanmakuModal"
+                            :disabled="refreshingDanmaku || !videoInfo?.video_parts?.length"
+                            class="flex flex-col items-center p-4 bg-gradient-to-br from-cyan-50 to-teal-100 border border-cyan-200/50 rounded-xl hover:from-cyan-100 hover:to-teal-100 hover:border-cyan-300/50 transition-all duration-300 group hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none">
+                            <div
+                                class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-teal-600 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
+                                <span class="text-xl text-white">🔄</span>
+                            </div>
+                            <span class="text-sm font-medium text-teal-800 group-hover:text-teal-900 text-center">{{
+                                refreshingDanmaku ? t('common.loading') : t('video.refreshDanmaku') }}</span>
+                        </button>
+
+
+
                         <button @click="openDeleteModal"
                             class="flex flex-col items-center p-4 bg-gradient-to-br from-red-50 to-rose-100 border border-red-200/50 rounded-xl hover:from-red-100 hover:to-rose-150 hover:border-red-300/50 transition-all duration-300 group hover:shadow-md">
                             <div
                                 class="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
                                 <span class="text-xl text-white">🗑️</span>
                             </div>
-                            <span class="text-sm font-medium text-red-700 group-hover:text-red-800">删除视频</span>
+                            <span class="text-sm font-medium text-red-700 group-hover:text-red-800">{{
+                                t('video.deleteVideo')
+                                }}</span>
                         </button>
                     </div>
                 </div>
@@ -197,43 +217,70 @@
             </RouterLink>
         </div>
 
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+        <div v-if="showDeleteModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
             <div class="w-full max-w-md rounded-xl bg-white shadow-2xl border border-gray-200 p-5">
-                <h3 class="text-lg font-semibold text-gray-900">删除视频确认</h3>
+                <h3 class="text-lg font-semibold text-gray-900">{{ t('video.deleteVideoTitle') }}</h3>
                 <p class="text-sm text-gray-600 mt-2">
-                    你可以选择临时删除（仅删除本地文件）或永久删除（软删除并删除弹幕）。永久删除后不会再自动下载。
+                    {{ t('video.deleteVideoDescription') }}
                 </p>
 
                 <div class="mt-4 space-y-3">
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" class="mt-0.5" v-model="deletePermanent" @change="onPermanentChange" />
                         <span class="text-sm text-gray-700">
-                            永久删除（软删除视频记录、删除弹幕和本地视频文件）
+                            {{ t('video.deletePermanentLabel') }}
                         </span>
                     </label>
 
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" class="mt-0.5" v-model="deleteAndRequeue" :disabled="deletePermanent" />
                         <span class="text-sm text-gray-700" :class="{ 'opacity-50': deletePermanent }">
-                            删除后立即重新下载（仅临时删除可用）
+                            {{ t('video.deleteRequeueLabel') }}
                         </span>
                     </label>
                 </div>
 
                 <div class="mt-5 flex justify-end gap-2">
-                    <button
-                        class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        :disabled="deletingVideo"
-                        @click="closeDeleteModal"
-                    >
-                        取消
+                    <button class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        :disabled="deletingVideo" @click="closeDeleteModal">
+                        {{ t('video.deleteCancel') }}
                     </button>
-                    <button
-                        class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-                        :disabled="deletingVideo"
-                        @click="confirmDeleteVideo"
-                    >
-                        {{ deletingVideo ? '处理中...' : '确认删除' }}
+                    <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                        :disabled="deletingVideo" @click="confirmDeleteVideo">
+                        {{ deletingVideo ? t('video.deleting') : t('video.deleteConfirm') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showRefreshDanmakuModal && !isAudioVideo"
+            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
+            <div
+                class="w-full max-w-md rounded-xl bg-white shadow-2xl border border-cyan-100 p-5 ring-1 ring-cyan-500/10">
+                <div class="flex items-center gap-2 mb-1">
+                    <span
+                        class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-teal-600 text-white text-sm">🔄</span>
+                    <h3 class="text-lg font-semibold text-gray-900">{{ t('video.refreshDanmakuTitle') }}</h3>
+                </div>
+                <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+                    <template v-if="(videoInfo?.video_parts?.length ?? 0) <= 1">{{ t('video.refreshDanmakuDescSingle')
+                    }}</template>
+                    <template v-else>{{ t('video.refreshDanmakuDescMulti', {
+                        count: videoInfo?.video_parts?.length ?? 0
+                    })
+                        }}</template>
+                </p>
+
+                <div class="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <button type="button"
+                        class="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        :disabled="refreshingDanmaku" @click="closeRefreshDanmakuModal">
+                        {{ t('common.cancel') }}
+                    </button>
+                    <button type="button"
+                        class="px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-700 hover:to-teal-700 disabled:opacity-60 shadow-sm"
+                        :disabled="refreshingDanmaku" @click="confirmRefreshDanmaku">
+                        {{ refreshingDanmaku ? t('common.loading') : t('video.refreshDanmakuConfirm') }}
                     </button>
                 </div>
             </div>
@@ -242,21 +289,22 @@
 </template>
 <script lang="ts" setup>
 import { computed, onMounted, ref, nextTick, onUnmounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
+import { useToast } from '@/composables/toast';
 import { useI18n } from 'vue-i18n';
 import { formatTimestamp } from '../lib/helper';
 import Player from '../components/Player.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import type { Video, VideoPartType } from '@/api/fav';
-import { deleteVideo, getVideoDanmaku, getVideoInfo } from '@/api/video';
+import { deleteVideo, getVideoDanmaku, getVideoInfo, refreshVideoDanmaku } from '@/api/video';
 
 const { t } = useI18n();
+const toast = useToast();
 const playerRef = ref()
 const playerContainer = ref<HTMLDivElement | null>(null)
 const sidebarHeight = ref('auto')
 
 const route = useRoute()
-const router = useRouter()
 
 const videoId = ref(route.params.id)
 
@@ -384,6 +432,8 @@ const downloadCover = () => {
 }
 
 const videoInfo = ref<Video | null>()
+/** 与后端 Video::isAudio() 一致，type === 12 为音频稿 */
+const isAudioVideo = computed(() => Number(videoInfo.value?.type) === 12)
 const notfound = ref(false)
 
 const currentPart = ref<VideoPartType | null>(null)
@@ -393,6 +443,9 @@ const showDeleteModal = ref(false)
 const deletePermanent = ref(false)
 const deleteAndRequeue = ref(false)
 const deletingVideo = ref(false)
+
+const showRefreshDanmakuModal = ref(false)
+const refreshingDanmaku = ref(false)
 
 // Player 准备就绪时的回调
 const onPlayerReady = () => {
@@ -438,14 +491,58 @@ const confirmDeleteVideo = async () => {
     if (!videoInfo.value) return
     deletingVideo.value = true
     try {
-        await deleteVideo(Number(videoInfo.value.id), undefined, {
+        const res = await deleteVideo(Number(videoInfo.value.id), undefined, {
             permanent: deletePermanent.value,
             requeue: deleteAndRequeue.value,
         })
-        showDeleteModal.value = false
-        router.push('/videos')
+        if (res.code === 0) {
+            toast.success(t('video.deleteSuccess'))
+            showDeleteModal.value = false
+        } else {
+            toast.error(res.message ?? t('video.deleteFailed'))
+        }
+    } catch {
+        toast.error(t('video.deleteFailed'))
     } finally {
         deletingVideo.value = false
+    }
+}
+
+const openRefreshDanmakuModal = () => {
+    if (isAudioVideo.value) {
+        return
+    }
+    if (!videoInfo.value?.video_parts?.length) {
+        toast.error(t('video.refreshDanmakuNoParts'))
+        return
+    }
+    showRefreshDanmakuModal.value = true
+}
+
+const closeRefreshDanmakuModal = () => {
+    if (refreshingDanmaku.value) return
+    showRefreshDanmakuModal.value = false
+}
+
+const confirmRefreshDanmaku = async () => {
+    if (!videoInfo.value) return
+    refreshingDanmaku.value = true
+    try {
+        const res = await refreshVideoDanmaku(Number(videoInfo.value.id))
+        if (res.code === 0 && res.parts_queued > 0) {
+            const msg =
+                res.parts_queued === 1
+                    ? t('video.refreshDanmakuQueuedSingle')
+                    : t('video.refreshDanmakuQueuedMulti', { count: res.parts_queued })
+            toast.success(msg)
+            showRefreshDanmakuModal.value = false
+        } else {
+            toast.error(res.message ?? t('video.refreshDanmakuError'))
+        }
+    } catch {
+        toast.error(t('video.refreshDanmakuError'))
+    } finally {
+        refreshingDanmaku.value = false
     }
 }
 
